@@ -7,14 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShoppingCart, Plus, Minus, Trash2, Send, Search } from "lucide-react";
@@ -215,7 +207,7 @@ export default function TableMenuPage() {
               placeholder="Search menu items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full"
+              className="pl-10 w-full md:w-1/3 bg-white"
             />
             {searchQuery && (
               <button
@@ -270,9 +262,9 @@ export default function TableMenuPage() {
             found for "{searchQuery}"
           </p>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {searchedMenu.map((item) => (
-            <Card key={item._id} className="overflow-hidden">
+            <Card key={item._id} className="overflow-hidden pt-0 pb-0">
               {item.image ? (
                 <div className="aspect-square relative overflow-hidden bg-gray-200">
                   <img
@@ -286,15 +278,11 @@ export default function TableMenuPage() {
                   <p className="text-gray-400 text-sm">No Image</p>
                 </div>
               )}
-              <CardContent className="p-4">
+              <CardContent className="px-2">
                 <h3 className="font-semibold text-lg mb-1">{item.name}</h3>
-                {item.description && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    {item.description}
-                  </p>
-                )}
+
                 <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-black">
+                  <span className=" text-sm md:text-xl font-bold text-black">
                     ${item.price.toFixed(2)}
                   </span>
                   <Badge variant="outline">{item.category}</Badge>
@@ -321,17 +309,32 @@ export default function TableMenuPage() {
         )}
       </div>
 
-      {/* Cart Dialog */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="relative">
+      {/* Cart Sidebar */}
+      {showCart && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50"
+          onClick={() => setShowCart(false)}
+        />
+      )}
+      <div
+        className={`fixed top-0 right-0 h-full w-full sm:w-[400px] md:w-[500px] bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
+          showCart ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold">Your Order</h2>
+              <p className="text-sm text-gray-600">Table {tableNumber}</p>
+            </div>
             <button
               onClick={() => setShowCart(false)}
-              className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close"
             >
               <svg
-                className="w-6 h-6 sm:w-8 sm:h-8"
+                className="w-6 h-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -344,15 +347,10 @@ export default function TableMenuPage() {
                 />
               </svg>
             </button>
-            <DialogTitle className="text-xl sm:text-2xl">
-              Your Order
-            </DialogTitle>
-            <DialogDescription className="text-sm sm:text-base">
-              Table {tableNumber} - Review and submit your order
-            </DialogDescription>
-          </DialogHeader>
+          </div>
 
-          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+          {/* Cart Items */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {cart.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
                 Your cart is empty
@@ -362,39 +360,39 @@ export default function TableMenuPage() {
                 {cart.map((item) => (
                   <div
                     key={item._id}
-                    className="flex gap-2 sm:gap-4 p-3 sm:p-4 border rounded-lg"
+                    className="flex gap-3 p-3 border rounded-lg"
                   >
                     {item.image && (
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
+                        className="w-20 h-20 object-cover rounded flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm sm:text-base truncate">
+                      <h4 className="font-semibold text-sm truncate">
                         {item.name}
                       </h4>
-                      <p className="text-xs sm:text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
                         ${item.price.toFixed(2)} each
                       </p>
-                      <div className="flex items-center gap-1 sm:gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item._id, -1)}
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="h-8 w-8 p-0"
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 sm:w-8 text-center text-sm sm:text-base">
+                        <span className="w-8 text-center text-sm">
                           {item.quantity}
                         </span>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item._id, 1)}
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="h-8 w-8 p-0"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -402,25 +400,22 @@ export default function TableMenuPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => removeFromCart(item._id)}
-                          className="ml-auto h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          className="ml-auto h-8 w-8 p-0"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="font-semibold text-sm sm:text-base">
+                      <p className="font-semibold text-sm">
                         ${(item.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
                 ))}
 
-                <div className="border-t pt-3 sm:pt-4">
-                  <Label
-                    htmlFor="customerNotes"
-                    className="text-sm sm:text-base"
-                  >
+                <div className="border-t pt-4">
+                  <Label htmlFor="customerNotes" className="text-sm">
                     Additional Notes (Optional)
                   </Label>
                   <Textarea
@@ -429,33 +424,33 @@ export default function TableMenuPage() {
                     onChange={(e) => setCustomerNotes(e.target.value)}
                     placeholder="Any special requests or dietary requirements?"
                     rows={3}
-                    className="mt-2 text-sm sm:text-base"
+                    className="mt-2 text-sm"
                   />
-                </div>
-
-                <div className="border-t pt-3 sm:pt-4">
-                  <div className="flex justify-between items-center text-lg sm:text-xl font-bold">
-                    <span>Total:</span>
-                    <span>${getTotalAmount().toFixed(2)}</span>
-                  </div>
                 </div>
               </>
             )}
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              onClick={handleSubmitOrder}
-              disabled={cart.length === 0 || submitting}
-              className="w-full h-11 sm:h-10 text-base sm:text-sm"
-              size="lg"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {submitting ? "Placing Order..." : "Place Order"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Footer */}
+          {cart.length > 0 && (
+            <div className="border-t p-4 space-y-4">
+              <div className="flex justify-between items-center text-xl font-bold">
+                <span>Total:</span>
+                <span>${getTotalAmount().toFixed(2)}</span>
+              </div>
+              <Button
+                onClick={handleSubmitOrder}
+                disabled={submitting}
+                className="w-full h-12"
+                size="lg"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {submitting ? "Placing Order..." : "Place Order"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
