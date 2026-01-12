@@ -19,9 +19,7 @@ export async function GET(req) {
       query.status = status;
     }
 
-    const orders = await TableOrder.find(query)
-      .sort({ createdAt: -1 })
-      .populate("items.menuId");
+    const orders = await TableOrder.find(query).sort({ createdAt: -1 });
 
     return NextResponse.json({ orders }, { status: 200 });
   } catch (error) {
@@ -35,7 +33,15 @@ export async function GET(req) {
 // POST create new table order
 export async function POST(req) {
   try {
-    const { tableNumber, items, totalAmount, customerNotes } = await req.json();
+    const {
+      tableNumber,
+      items,
+      totalAmount,
+      customerNotes,
+      createdBy,
+      waiterName,
+      customerName,
+    } = await req.json();
 
     if (!tableNumber || !items || items.length === 0) {
       return NextResponse.json(
@@ -57,6 +63,9 @@ export async function POST(req) {
       orderNumber,
       customerNotes,
       status: "pending",
+      createdBy: createdBy || "customer",
+      waiterName: waiterName || null,
+      customerName: customerName || null,
     });
 
     return NextResponse.json(

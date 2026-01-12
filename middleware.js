@@ -60,12 +60,12 @@ const protectedRoutes = [
   {
     regex: /^\/api\/table-orders$/,
     methods: ["GET"],
-    roles: ["admin", "chef", "waiter"],
+    roles: ["admin", "chef", "waiter", "cashier"],
   },
   {
     regex: /^\/api\/table-orders\/.*$/,
     methods: ["PATCH", "DELETE"],
-    roles: ["admin", "chef", "waiter"],
+    roles: ["admin", "chef", "waiter", "cashier"],
   },
 ];
 
@@ -109,6 +109,15 @@ export async function middleware(req) {
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
+    }
+
+    // Special case: Allow users to update their own profile (PATCH /api/users/[id])
+    if (pathname.startsWith("/api/users/") && method === "PATCH") {
+      const userId = pathname.split("/api/users/")[1];
+      if (token.id === userId) {
+        console.log("User updating own profile, allowing");
+        return NextResponse.next();
+      }
     }
 
     // Check if user has required role

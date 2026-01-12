@@ -45,9 +45,9 @@ export async function POST(req) {
       );
     }
 
-    if (!["chef", "waiter"].includes(role)) {
+    if (!["chef", "waiter", "cashier"].includes(role)) {
       return NextResponse.json(
-        { error: "Role must be either 'chef' or 'waiter'" },
+        { error: "Role must be either chef, waiter or cashier" },
         { status: 400 }
       );
     }

@@ -22,6 +22,7 @@ export default function TableMenuPage() {
   const [showCart, setShowCart] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [customerNotes, setCustomerNotes] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -123,6 +124,7 @@ export default function TableMenuPage() {
         })),
         totalAmount: getTotalAmount(),
         customerNotes,
+        customerName: customerName.trim() || null,
       };
 
       const res = await fetch("/api/table-orders", {
@@ -137,6 +139,7 @@ export default function TableMenuPage() {
         toast.success("Order placed successfully!");
         setCart([]);
         setCustomerNotes("");
+        setCustomerName("");
         setShowCart(false);
       } else {
         toast.error(data.error || "Failed to place order");
@@ -414,18 +417,32 @@ export default function TableMenuPage() {
                   </div>
                 ))}
 
-                <div className="border-t pt-4">
-                  <Label htmlFor="customerNotes" className="text-sm">
-                    Additional Notes (Optional)
-                  </Label>
-                  <Textarea
-                    id="customerNotes"
-                    value={customerNotes}
-                    onChange={(e) => setCustomerNotes(e.target.value)}
-                    placeholder="Any special requests or dietary requirements?"
-                    rows={3}
-                    className="mt-2 text-sm"
-                  />
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <Label htmlFor="customerName" className="text-sm">
+                      Your Name (Optional)
+                    </Label>
+                    <Input
+                      id="customerName"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="mt-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerNotes" className="text-sm">
+                      Additional Notes (Optional)
+                    </Label>
+                    <Textarea
+                      id="customerNotes"
+                      value={customerNotes}
+                      onChange={(e) => setCustomerNotes(e.target.value)}
+                      placeholder="Any special requests or dietary requirements?"
+                      rows={3}
+                      className="mt-2 text-sm"
+                    />
+                  </div>
                 </div>
               </>
             )}

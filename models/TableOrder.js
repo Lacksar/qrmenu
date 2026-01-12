@@ -49,7 +49,14 @@ const TableOrderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["pending", "preparing", "ready", "served", "cancelled"],
+        values: [
+          "pending",
+          "preparing",
+          "ready",
+          "served",
+          "completed",
+          "cancelled",
+        ],
         message: "{VALUE} is not a valid status.",
       },
       default: "pending",
@@ -59,6 +66,19 @@ const TableOrderSchema = new mongoose.Schema(
       required: true,
     },
     customerNotes: {
+      type: String,
+      trim: true,
+    },
+    createdBy: {
+      type: String,
+      enum: ["customer", "waiter"],
+      default: "customer",
+    },
+    waiterName: {
+      type: String,
+      trim: true,
+    },
+    customerName: {
       type: String,
       trim: true,
     },

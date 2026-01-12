@@ -1,6 +1,6 @@
 "use client";
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { Suspense, useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +19,28 @@ import { Loader2 } from "lucide-react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      if (session.user.role === "admin") {
+        router.push("/admin");
+      } else if (session.user.role === "chef") {
+        router.push("/chef");
+      } else if (session.user.role === "waiter") {
+        router.push("/waiter");
+      } else if (session.user.role === "cashier") {
+        router.push("/cashier/pos");
+      } else {
+        router.push("/");
+      }
+    }
+  }, [status, session, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,6 +69,8 @@ function LoginForm() {
           router.push("/chef");
         } else if (session?.user?.role === "waiter") {
           router.push("/waiter");
+        } else if (session?.user?.role === "cashier") {
+          router.push("/cashier/pos");
         } else {
           router.push("/");
         }
@@ -62,17 +82,28 @@ function LoginForm() {
     }
   };
 
+  // Show loading while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't show login form if already authenticated
+  if (status === "authenticated") {
+    return null;
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your credentials to access the system.
-          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid gap-4 my-4">
             <div className="grid gap-2">
               <Label htmlFor="username">Username / Phone</Label>
               <Input

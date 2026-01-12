@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Home,
   Package,
@@ -25,6 +31,11 @@ import {
   Table as TableIcon,
   QrCode,
   UtensilsCrossed,
+  ChefHat,
+  DollarSign,
+  UserCheck,
+  ChevronDown,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
@@ -44,6 +55,56 @@ const NavLink = ({ href, children, className }) => {
     >
       {children}
     </Link>
+  );
+};
+
+const POSMenu = () => {
+  const pathname = usePathname();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const isPOSActive =
+    pathname?.startsWith("/chef") ||
+    pathname?.startsWith("/cashier") ||
+    pathname?.startsWith("/waiter");
+
+  // Auto-open if on a POS page
+  React.useEffect(() => {
+    if (isPOSActive) {
+      setIsOpen(true);
+    }
+  }, [isPOSActive]);
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+          isPOSActive && "bg-muted text-primary"
+        )}
+      >
+        <UtensilsCrossed className="h-4 w-4" />
+        <span className="flex-1 text-left">POS</span>
+        <ChevronDown
+          className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")}
+        />
+      </button>
+      {isOpen && (
+        <div className="ml-6 mt-1 space-y-1">
+          <NavLink href="/chef">
+            <ChefHat className="h-4 w-4" />
+            Chef Kitchen
+          </NavLink>
+          <NavLink href="/cashier/pos">
+            <DollarSign className="h-4 w-4" />
+            Cashier
+          </NavLink>
+          <NavLink href="/waiter">
+            <UserCheck className="h-4 w-4" />
+            Waiter
+          </NavLink>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -71,6 +132,7 @@ export default function AdminLayout({ children }) {
         <Home className="h-4 w-4" />
         Dashboard
       </NavLink>
+      <POSMenu />
       <NavLink href="/admin/orders">
         <ShoppingCart className="h-4 w-4" />
         Orders
@@ -78,6 +140,14 @@ export default function AdminLayout({ children }) {
       <NavLink href="/admin/table-orders">
         <UtensilsCrossed className="h-4 w-4" />
         Table Orders
+      </NavLink>
+      <NavLink href="/admin/bills">
+        <Receipt className="h-4 w-4" />
+        Bills
+      </NavLink>
+      <NavLink href="/admin/customers">
+        <Users className="h-4 w-4" />
+        Customers
       </NavLink>
       <NavLink href="/admin/menu">
         <Package className="h-4 w-4" />
@@ -138,10 +208,10 @@ export default function AdminLayout({ children }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
-              <div className="flex items-center gap-2 text-lg font-semibold mb-4">
+              <SheetTitle className="flex items-center gap-2 text-lg font-semibold mb-4">
                 <Package className="h-6 w-6" />
                 <span>Admin Panel</span>
-              </div>
+              </SheetTitle>
               {NavLinks}
             </SheetContent>
           </Sheet>

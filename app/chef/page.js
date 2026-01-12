@@ -8,18 +8,43 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, ChefHat, CheckCircle, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Clock,
+  ChefHat,
+  CheckCircle,
+  AlertCircle,
+  Settings,
+  XCircle,
+} from "lucide-react";
 
 export default function ChefKitchenDisplay() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session && session.user.role !== "chef") {
+    } else if (
+      session &&
+      !session.user.isAdmin &&
+      session.user.role !== "chef"
+    ) {
       router.push("/");
       toast.error("Access denied");
     } else if (session) {
@@ -38,7 +63,10 @@ export default function ChefKitchenDisplay() {
         // Filter only active orders and sort by oldest first
         const activeOrders = data.orders
           .filter(
-            (order) => order.status !== "served" && order.status !== "cancelled"
+            (order) =>
+              order.status !== "served" &&
+              order.status !== "completed" &&
+              order.status !== "cancelled"
           )
           .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         setOrders(activeOrders);
@@ -70,6 +98,35 @@ export default function ChefKitchenDisplay() {
       }
     } catch (error) {
       toast.error("Failed to update order");
+    }
+  };
+
+  const handleCancelClick = (order) => {
+    setOrderToCancel(order);
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!orderToCancel) return;
+
+    try {
+      const res = await fetch(`/api/table-orders/${orderToCancel._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+
+      if (res.ok) {
+        toast.success("Order cancelled");
+        fetchOrders();
+      } else {
+        toast.error("Failed to cancel order");
+      }
+    } catch (error) {
+      toast.error("Failed to cancel order");
+    } finally {
+      setCancelDialogOpen(false);
+      setOrderToCancel(null);
     }
   };
 
@@ -115,8 +172,56 @@ export default function ChefKitchenDisplay() {
 
   if (loading || status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+        {/* Header - No Skeleton */}
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg sticky top-0 z-20">
+          <div className="w-full px-3 py-4 md:px-4">
+            <div className="flex justify-between items-center gap-2">
+              <div className="flex gap-2">
+                <button className="flex items-center gap-2 px-3 md:px-6 py-3 bg-white/30 text-white rounded-lg font-medium backdrop-blur-sm">
+                  <ChefHat className="h-5 w-5" />
+                  <span className="hidden md:inline">Kitchen</span>
+                </button>
+                <button className="flex items-center gap-2 px-3 md:px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium backdrop-blur-sm transition-colors">
+                  <Settings className="h-5 w-5" />
+                  <span className="hidden md:inline">Settings</span>
+                </button>
+              </div>
+              <Button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                variant="secondary"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm text-sm px-3 md:px-4"
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders Grid Skeleton */}
+        <div className="w-full px-3 py-3 md:px-4 md:py-4 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+            {[1, 2, 3].map((col) => (
+              <div key={col} className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Separator />
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader className="pb-2">
+                      <Skeleton className="h-6 w-24 mb-2" />
+                      <Skeleton className="h-4 w-32" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -126,29 +231,30 @@ export default function ChefKitchenDisplay() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Compact Header */}
-      <div className="border-b bg-card sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-3 py-2 md:px-4 md:py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-primary/10 rounded">
-                <ChefHat className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-base md:text-lg font-bold">
-                  Kitchen Display
-                </h1>
-                <p className="text-xs text-muted-foreground hidden md:block">
-                  {session?.user?.name}
-                </p>
-              </div>
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg sticky top-0 z-20">
+        <div className="w-full px-3 py-4 md:px-4">
+          <div className="flex justify-between items-center gap-2">
+            {/* Navigation */}
+            <div className="flex gap-2">
+              <button className="flex items-center gap-2 px-3 md:px-6 py-3 bg-white/30 text-white rounded-lg font-medium backdrop-blur-sm">
+                <ChefHat className="h-5 w-5" />
+                <span className="hidden md:inline">Kitchen</span>
+              </button>
+              <button
+                onClick={() => router.push("/chef/settings")}
+                className="flex items-center gap-2 px-3 md:px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium backdrop-blur-sm transition-colors"
+              >
+                <Settings className="h-5 w-5" />
+                <span className="hidden md:inline">Settings</span>
+              </button>
             </div>
+
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-xs md:text-sm"
+              variant="secondary"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm text-sm px-3 md:px-4"
             >
               Logout
             </Button>
@@ -156,9 +262,73 @@ export default function ChefKitchenDisplay() {
         </div>
       </div>
 
+      {/* Mobile Tabs - Only visible on mobile */}
+      <div className="lg:hidden bg-white border-b sticky top-[72px] z-10 overflow-x-hidden">
+        <div className="flex w-full">
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`flex-1 py-3 px-2 text-xs font-semibold transition-colors ${
+              activeTab === "pending"
+                ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>New</span>
+              <Badge
+                variant="secondary"
+                className="text-xs px-1.5 py-0 min-w-[20px]"
+              >
+                {groupedOrders.pending.length}
+              </Badge>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("preparing")}
+            className={`flex-1 py-3 px-2 text-xs font-semibold transition-colors ${
+              activeTab === "preparing"
+                ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <ChefHat className="h-4 w-4" />
+              <span>Progress</span>
+              <Badge
+                variant="secondary"
+                className="text-xs px-1.5 py-0 min-w-[20px]"
+              >
+                {groupedOrders.preparing.length}
+              </Badge>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("ready")}
+            className={`flex-1 py-3 px-2 text-xs font-semibold transition-colors ${
+              activeTab === "ready"
+                ? "text-green-600 border-b-2 border-green-600 bg-green-50"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <CheckCircle className="h-4 w-4" />
+              <span>Ready</span>
+              <Badge
+                variant="secondary"
+                className="text-xs px-1.5 py-0 min-w-[20px]"
+              >
+                {groupedOrders.ready.length}
+              </Badge>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Orders Grid */}
-      <div className="container mx-auto px-2 py-3 md:px-4 md:py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+      <div className="w-full px-3 py-3 md:px-4 md:py-4 max-w-7xl mx-auto">
+        {/* Desktop: Show all columns */}
+        <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
           {/* Pending Orders */}
           <div className="space-y-2 md:space-y-3">
             <div className="flex items-center justify-between px-1">
@@ -182,67 +352,72 @@ export default function ChefKitchenDisplay() {
                 groupedOrders.pending.map((order) => (
                   <Card
                     key={order._id}
-                    className="border-l-4 border-l-yellow-500 shadow-sm hover:shadow-md transition-shadow"
+                    className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
                   >
-                    <CardHeader className="pb-2 px-3 pt-3 md:px-4 md:pt-4">
-                      <div className="flex justify-between items-start mb-1">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg md:text-xl font-bold">
-                            #{order.orderNumber}
-                          </CardTitle>
-                          <p className="text-sm md:text-base font-semibold text-primary">
-                            Table {order.tableNumber}
-                          </p>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
                         </div>
-                        {getStatusBadge(order.status)}
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                          Preparing
+                        </Badge>
                       </div>
+
+                      {/* Time */}
                       <div
-                        className={`flex items-center gap-1 text-xs font-medium ${getTimeColor(
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
                           order.createdAt
                         )}`}
                       >
-                        <Clock className="h-3 w-3" />
-                        {getTimeElapsed(order.createdAt)}
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 px-3 pb-3 md:px-4 md:pb-4">
-                      <div className="space-y-1.5">
+
+                      {/* Items */}
+                      <div className="space-y-1 text-gray-600">
                         {order.items.map((item, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex justify-between items-start">
-                              <span className="font-semibold text-sm">
-                                {item.quantity}x {item.name}
-                              </span>
-                            </div>
-                            {item.notes && (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded p-1.5">
-                                <p className="text-xs text-yellow-800 font-medium">
-                                  ⚠️ {item.notes}
-                                </p>
-                              </div>
-                            )}
+                          <div key={idx}>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
                           </div>
                         ))}
                       </div>
+
+                      {/* Notes */}
                       {order.customerNotes && (
-                        <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                          <p className="text-xs font-semibold text-blue-900 mb-0.5">
-                            NOTES:
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
                           </p>
-                          <p className="text-xs text-blue-800">
+                          <p className="text-sm text-yellow-800">
                             {order.customerNotes}
                           </p>
                         </div>
                       )}
-                      <Button
-                        onClick={() =>
-                          updateOrderStatus(order._id, "preparing")
-                        }
-                        className="w-full h-9 text-sm font-semibold"
-                        size="sm"
-                      >
-                        Start Preparing
-                      </Button>
+
+                      {/* Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() =>
+                            updateOrderStatus(order._id, "preparing")
+                          }
+                          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold h-11"
+                        >
+                          Start Preparing
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))
@@ -273,65 +448,70 @@ export default function ChefKitchenDisplay() {
                 groupedOrders.preparing.map((order) => (
                   <Card
                     key={order._id}
-                    className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow"
+                    className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
                   >
-                    <CardHeader className="pb-2 px-3 pt-3 md:px-4 md:pt-4">
-                      <div className="flex justify-between items-start mb-1">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg md:text-xl font-bold">
-                            #{order.orderNumber}
-                          </CardTitle>
-                          <p className="text-sm md:text-base font-semibold text-primary">
-                            Table {order.tableNumber}
-                          </p>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
                         </div>
-                        {getStatusBadge(order.status)}
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                          Preparing
+                        </Badge>
                       </div>
+
+                      {/* Time */}
                       <div
-                        className={`flex items-center gap-1 text-xs font-medium ${getTimeColor(
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
                           order.createdAt
                         )}`}
                       >
-                        <Clock className="h-3 w-3" />
-                        {getTimeElapsed(order.createdAt)}
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 px-3 pb-3 md:px-4 md:pb-4">
-                      <div className="space-y-1.5">
+
+                      {/* Items */}
+                      <div className="space-y-1 text-gray-600">
                         {order.items.map((item, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex justify-between items-start">
-                              <span className="font-semibold text-sm">
-                                {item.quantity}x {item.name}
-                              </span>
-                            </div>
-                            {item.notes && (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded p-1.5">
-                                <p className="text-xs text-yellow-800 font-medium">
-                                  ⚠️ {item.notes}
-                                </p>
-                              </div>
-                            )}
+                          <div key={idx}>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
                           </div>
                         ))}
                       </div>
+
+                      {/* Notes */}
                       {order.customerNotes && (
-                        <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                          <p className="text-xs font-semibold text-blue-900 mb-0.5">
-                            NOTES:
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
                           </p>
-                          <p className="text-xs text-blue-800">
+                          <p className="text-sm text-yellow-800">
                             {order.customerNotes}
                           </p>
                         </div>
                       )}
-                      <Button
-                        onClick={() => updateOrderStatus(order._id, "ready")}
-                        className="w-full h-9 text-sm font-semibold bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        Mark as Ready
-                      </Button>
+
+                      {/* Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() => updateOrderStatus(order._id, "ready")}
+                          className="bg-green-500 hover:bg-green-600 text-white font-semibold h-11"
+                        >
+                          Mark as Ready
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))
@@ -362,47 +542,70 @@ export default function ChefKitchenDisplay() {
                 groupedOrders.ready.map((order) => (
                   <Card
                     key={order._id}
-                    className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow"
+                    className="border-t-4 border-t-green-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
                   >
-                    <CardHeader className="pb-2 px-3 pt-3 md:px-4 md:pt-4">
-                      <div className="flex justify-between items-start mb-1">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg md:text-xl font-bold">
-                            #{order.orderNumber}
-                          </CardTitle>
-                          <p className="text-sm md:text-base font-semibold text-primary">
-                            Table {order.tableNumber}
-                          </p>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
                         </div>
-                        {getStatusBadge(order.status)}
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                          Ready
+                        </Badge>
                       </div>
+
+                      {/* Time */}
                       <div
-                        className={`flex items-center gap-1 text-xs font-medium ${getTimeColor(
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
                           order.createdAt
                         )}`}
                       >
-                        <Clock className="h-3 w-3" />
-                        {getTimeElapsed(order.createdAt)}
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 px-3 pb-3 md:px-4 md:pb-4">
-                      <div className="space-y-1.5">
+
+                      {/* Items */}
+                      <div className="space-y-1 text-gray-600">
                         {order.items.map((item, idx) => (
                           <div key={idx}>
-                            <span className="font-semibold text-sm">
-                              {item.quantity}x {item.name}
-                            </span>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
                           </div>
                         ))}
                       </div>
-                      <Button
-                        onClick={() => updateOrderStatus(order._id, "served")}
-                        variant="outline"
-                        className="w-full h-9 text-sm font-semibold"
-                        size="sm"
-                      >
-                        Mark as Served
-                      </Button>
+
+                      {/* Notes */}
+                      {order.customerNotes && (
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
+                          </p>
+                          <p className="text-sm text-yellow-800">
+                            {order.customerNotes}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() => updateOrderStatus(order._id, "served")}
+                          className="bg-green-500 hover:bg-green-600 text-white font-semibold h-11"
+                        >
+                          Mark as Served
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))
@@ -410,7 +613,258 @@ export default function ChefKitchenDisplay() {
             </div>
           </div>
         </div>
+
+        {/* Mobile: Show only active tab */}
+        <div className="lg:hidden space-y-3">
+          {activeTab === "pending" && (
+            <div className="space-y-3">
+              {groupedOrders.pending.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    No pending orders
+                  </CardContent>
+                </Card>
+              ) : (
+                groupedOrders.pending.map((order) => (
+                  <Card
+                    key={order._id}
+                    className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
+                        </div>
+                        <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
+                          New
+                        </Badge>
+                      </div>
+                      <div
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
+                          order.createdAt
+                        )}`}
+                      >
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
+                      </div>
+                      <div className="space-y-1 text-gray-600">
+                        {order.items.map((item, idx) => (
+                          <div key={idx}>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      {order.customerNotes && (
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
+                          </p>
+                          <p className="text-sm text-yellow-800">
+                            {order.customerNotes}
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() =>
+                            updateOrderStatus(order._id, "preparing")
+                          }
+                          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold h-11"
+                        >
+                          Start Preparing
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === "preparing" && (
+            <div className="space-y-3">
+              {groupedOrders.preparing.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    No orders in preparation
+                  </CardContent>
+                </Card>
+              ) : (
+                groupedOrders.preparing.map((order) => (
+                  <Card
+                    key={order._id}
+                    className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                          Preparing
+                        </Badge>
+                      </div>
+                      <div
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
+                          order.createdAt
+                        )}`}
+                      >
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
+                      </div>
+                      <div className="space-y-1 text-gray-600">
+                        {order.items.map((item, idx) => (
+                          <div key={idx}>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      {order.customerNotes && (
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
+                          </p>
+                          <p className="text-sm text-yellow-800">
+                            {order.customerNotes}
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() => updateOrderStatus(order._id, "ready")}
+                          className="bg-green-500 hover:bg-green-600 text-white font-semibold h-11"
+                        >
+                          Mark as Ready
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === "ready" && (
+            <div className="space-y-3">
+              {groupedOrders.ready.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    No orders ready
+                  </CardContent>
+                </Card>
+              ) : (
+                groupedOrders.ready.map((order) => (
+                  <Card
+                    key={order._id}
+                    className="border-t-4 border-t-green-500 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">
+                            Table: {order.tableNumber}
+                          </h3>
+                        </div>
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                          Ready
+                        </Badge>
+                      </div>
+                      <div
+                        className={`flex items-center gap-1.5 text-sm ${getTimeColor(
+                          order.createdAt
+                        )}`}
+                      >
+                        <Clock className="h-4 w-4" />
+                        <span>{getTimeElapsed(order.createdAt)} ago</span>
+                      </div>
+                      <div className="space-y-1 text-gray-600">
+                        {order.items.map((item, idx) => (
+                          <div key={idx}>
+                            <p className="text-base">
+                              {item.name} x {item.quantity}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      {order.customerNotes && (
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                          <p className="text-sm font-semibold text-yellow-900 mb-1">
+                            Notes:
+                          </p>
+                          <p className="text-sm text-yellow-800">
+                            {order.customerNotes}
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() => updateOrderStatus(order._id, "served")}
+                          className="bg-green-500 hover:bg-green-600 text-white font-semibold h-11"
+                        >
+                          Mark as Served
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelClick(order)}
+                          variant="destructive"
+                          className="bg-red-500 hover:bg-red-600 text-white font-semibold h-11"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel order{" "}
+              <span className="font-bold">#{orderToCancel?.orderNumber}</span>{" "}
+              from Table {orderToCancel?.tableNumber}? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, Keep Order</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelOrder}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Yes, Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

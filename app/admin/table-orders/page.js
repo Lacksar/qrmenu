@@ -212,9 +212,11 @@ export default function TableOrdersPage() {
               <TableRow>
                 <TableHead>Order #</TableHead>
                 <TableHead>Table</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead>Notes</TableHead>
+                <TableHead>Created By</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Actions</TableHead>
@@ -234,10 +236,16 @@ export default function TableOrdersPage() {
                       <Skeleton className="h-4 w-24" />
                     </TableCell>
                     <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
                       <Skeleton className="h-4 w-32" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-20" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-28" />
@@ -258,6 +266,15 @@ export default function TableOrdersPage() {
                     </TableCell>
                     <TableCell className="font-semibold">
                       {order.tableNumber}
+                    </TableCell>
+                    <TableCell>
+                      {order.customerName ? (
+                        <span className="text-sm font-medium">
+                          {order.customerName}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(order.status)}>
@@ -287,6 +304,26 @@ export default function TableOrdersPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {order.createdBy === "waiter" ? (
+                          <div>
+                            <Badge variant="outline" className="text-xs">
+                              Waiter
+                            </Badge>
+                            {order.waiterName && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {order.waiterName}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Customer
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm">
                       {new Date(order.createdAt).toLocaleString()}
                     </TableCell>
@@ -295,7 +332,8 @@ export default function TableOrdersPage() {
                     </TableCell>
                     <TableCell>
                       {order.status !== "served" &&
-                        order.status !== "cancelled" && (
+                        order.status !== "cancelled" &&
+                        order.status !== "completed" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -321,7 +359,7 @@ export default function TableOrdersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan="8" className="text-center py-8">
+                  <TableCell colSpan="10" className="text-center py-8">
                     No table orders found.
                   </TableCell>
                 </TableRow>

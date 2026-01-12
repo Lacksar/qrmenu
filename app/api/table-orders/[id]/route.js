@@ -9,12 +9,13 @@ export async function PATCH(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Allow chef and waiter to update orders
+    // Allow chef, waiter, and cashier to update orders
     if (
       !session ||
       (!session.user.isAdmin &&
         session.user.role !== "chef" &&
-        session.user.role !== "waiter")
+        session.user.role !== "waiter" &&
+        session.user.role !== "cashier")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
