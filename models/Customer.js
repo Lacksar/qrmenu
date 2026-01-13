@@ -23,7 +23,10 @@ const CustomerSchema = new mongoose.Schema(
 );
 
 // Create a compound index that allows unique phone numbers but multiple null phones
-CustomerSchema.index({ phone: 1 }, { unique: true, sparse: true });
+// Remove the duplicate index definition
+if (!CustomerSchema.indexes().some((index) => index[0].phone)) {
+  CustomerSchema.index({ phone: 1 }, { unique: true, sparse: true });
+}
 
 export default mongoose.models.Customer ||
   mongoose.model("Customer", CustomerSchema);
